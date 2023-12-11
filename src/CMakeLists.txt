@@ -15,6 +15,8 @@ target_sources(sgl PRIVATE
 
     sgl/core/bitmap.cpp
     sgl/core/bitmap.h
+    sgl/core/blob.cpp
+    sgl/core/blob.h
     sgl/core/crypto.cpp
     sgl/core/crypto.h
     sgl/core/dds_file.cpp
