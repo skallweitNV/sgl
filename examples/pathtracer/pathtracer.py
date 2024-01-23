@@ -349,6 +349,7 @@ class Scene:
 
     def __init__(self, device: sgl.Device, stage: Stage):
         self.device = device
+        self.stage = stage
 
         self.camera = stage.camera
 
@@ -451,6 +452,20 @@ class Scene:
 
         # Build TLAS
         self.tlas = self.build_tlas()
+
+    def update(self):
+        # Prepare transforms
+        self.transforms = [t.matrix for t in self.stage.transforms]
+        self.inverse_transpose_transforms = [
+            sgl.math.transpose(sgl.math.inverse(t)) for t in self.transforms
+        ]
+        self.transform_buffer.from_numpy(
+            np.stack([t.to_numpy() for t in self.transforms])
+        )
+        self.inverse_transpose_transforms_buffer.from_numpy(
+            np.stack([t.to_numpy() for t in self.inverse_transpose_transforms])
+        )
+        # self.tlas = self.build_tlas()
 
     def build_blas(self, mesh_desc: MeshDesc):
         blas_geometry_desc = sgl.RayTracingGeometryDesc()
@@ -738,6 +753,15 @@ class App:
             timer.reset()
 
             self.window.process_events()
+
+            t = sgl.Timer()
+            for transform in self.stage.transforms:
+                transform.rotation.y += dt
+                # transform.update_matrix()
+            print(t.elapsed_ms())
+
+            frame = 0
+            self.scene.update()
 
             if self.camera_controller.update(dt):
                 frame = 0
