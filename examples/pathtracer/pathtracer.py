@@ -8,6 +8,7 @@ import struct
 
 EXAMPLE_DIR = Path(__file__).parent
 
+kali.Logger.get().level = kali.LogLevel.debug
 
 class Camera:
     def __init__(self):

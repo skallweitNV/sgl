@@ -4,7 +4,7 @@
 #define SGL_ENABLE_PRINT 0
 #endif
 
-namespace detail {
+namespace sgl::print {
 
 enum class Kind {
     scalar,
@@ -363,6 +363,17 @@ void print(
     output.write_arg(offset, arg7);
 }
 
+struct NullPrinter : IPrintOutput {
+    [ForceInline]
+    bool write_msg(String fmt, uint arg_count, uint total_data_count, out uint offset)
+    {
+        offset = {};
+        return false;
+    }
+    [ForceInline]
+    void write_arg(inout uint offset, IPrintable arg) { }
+};
+
 struct DebugPrinter : IPrintOutput {
 
     /// Single buffer that contains the print messages.
@@ -410,36 +421,27 @@ struct DebugPrinter : IPrintOutput {
     }
 };
 
-} // namespace detail
-
 #if SGL_ENABLE_PRINT
 
-ParameterBlock<detail::DebugPrinter> g_debug_printer;
+export struct PRINT_OUTPUT : IPrintOutput = DebugPrinter;
+#else
+
+export struct PRINT_OUTPUT : IPrintOutput = NullPrinter;
+
+#endif
+
+} // namespace sgl::print
+
+ParameterBlock<sgl::print::PRINT_OUTPUT> g_debug_printer;
 
 // clang-format off
-[ForceInline] void print(String fmt) { detail::print(g_debug_printer, fmt); }
-[ForceInline] void print(String fmt, detail::IPrintable arg0) { detail::print(g_debug_printer, fmt, arg0); }
-[ForceInline] void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1) { detail::print(g_debug_printer, fmt, arg0, arg1); }
-[ForceInline] void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2) { detail::print(g_debug_printer, fmt, arg0, arg1, arg2); }
-[ForceInline] void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3) { detail::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3); }
-[ForceInline] void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3, detail::IPrintable arg4) { detail::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3, arg4); }
-[ForceInline] void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3, detail::IPrintable arg4, detail::IPrintable arg5) { detail::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3, arg4, arg5); }
-[ForceInline] void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3, detail::IPrintable arg4, detail::IPrintable arg5, detail::IPrintable arg6) { detail::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3, arg4, arg5, arg6); }
-[ForceInline] void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3, detail::IPrintable arg4, detail::IPrintable arg5, detail::IPrintable arg6, detail::IPrintable arg7) { detail::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7); }
+[ForceInline] void print(String fmt) { sgl::print::print(g_debug_printer, fmt); }
+[ForceInline] void print(String fmt, sgl::print::IPrintable arg0) { sgl::print::print(g_debug_printer, fmt, arg0); }
+[ForceInline] void print(String fmt, sgl::print::IPrintable arg0, sgl::print::IPrintable arg1) { sgl::print::print(g_debug_printer, fmt, arg0, arg1); }
+[ForceInline] void print(String fmt, sgl::print::IPrintable arg0, sgl::print::IPrintable arg1, sgl::print::IPrintable arg2) { sgl::print::print(g_debug_printer, fmt, arg0, arg1, arg2); }
+[ForceInline] void print(String fmt, sgl::print::IPrintable arg0, sgl::print::IPrintable arg1, sgl::print::IPrintable arg2, sgl::print::IPrintable arg3) { sgl::print::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3); }
+[ForceInline] void print(String fmt, sgl::print::IPrintable arg0, sgl::print::IPrintable arg1, sgl::print::IPrintable arg2, sgl::print::IPrintable arg3, sgl::print::IPrintable arg4) { sgl::print::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3, arg4); }
+[ForceInline] void print(String fmt, sgl::print::IPrintable arg0, sgl::print::IPrintable arg1, sgl::print::IPrintable arg2, sgl::print::IPrintable arg3, sgl::print::IPrintable arg4, sgl::print::IPrintable arg5) { sgl::print::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3, arg4, arg5); }
+[ForceInline] void print(String fmt, sgl::print::IPrintable arg0, sgl::print::IPrintable arg1, sgl::print::IPrintable arg2, sgl::print::IPrintable arg3, sgl::print::IPrintable arg4, sgl::print::IPrintable arg5, sgl::print::IPrintable arg6) { sgl::print::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3, arg4, arg5, arg6); }
+[ForceInline] void print(String fmt, sgl::print::IPrintable arg0, sgl::print::IPrintable arg1, sgl::print::IPrintable arg2, sgl::print::IPrintable arg3, sgl::print::IPrintable arg4, sgl::print::IPrintable arg5, sgl::print::IPrintable arg6, sgl::print::IPrintable arg7) { sgl::print::print(g_debug_printer, fmt, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7); }
 // clang-format on
-
-#else // SGL_ENABLE_PRINT
-
-// clang-format off
-void print(String fmt) { }
-void print(String fmt, detail::IPrintable arg0) { }
-void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1) { }
-void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2) { }
-void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3) { }
-void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3, detail::IPrintable arg4) { }
-void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3, detail::IPrintable arg4, detail::IPrintable arg5) { }
-void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3, detail::IPrintable arg4, detail::IPrintable arg5, detail::IPrintable arg6) { }
-void print(String fmt, detail::IPrintable arg0, detail::IPrintable arg1, detail::IPrintable arg2, detail::IPrintable arg3, detail::IPrintable arg4, detail::IPrintable arg5, detail::IPrintable arg6, detail::IPrintable arg7) { }
-// clang-format on
-
-#endif // SGL_ENABLE_PRINT
