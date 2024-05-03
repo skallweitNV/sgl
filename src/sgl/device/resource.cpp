@@ -336,6 +336,7 @@ Buffer::Buffer(ref<Device> device, BufferDesc desc)
     // gfx_desc.existingHandle =
     gfx_desc.isShared = is_set(m_desc.usage, ResourceUsage::shared);
     gfx_desc.sizeInBytes = static_cast<gfx::Size>(m_desc.size);
+    // elementSize is only used for structured buffers on D3D11 (ignored on other APIs).
     gfx_desc.elementSize = static_cast<gfx::Size>(m_desc.struct_size);
     gfx_desc.format = static_cast<gfx::Format>(m_desc.format);
 

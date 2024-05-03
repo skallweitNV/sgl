@@ -66,14 +66,29 @@ def dispatch_compute(
     path: str,
     entry_point: str,
     thread_count: list[int],
-    buffers: dict = {},
-    textures: dict = {},
-    defines: dict[str, str] = {},
-    compiler_options: dict = {},
+    buffers: dict = None,
+    textures: dict = None,
+    params: dict = None,
+    vars: dict = None,
+    defines: dict[str, str] = None,
+    compiler_options: dict = None,
     shader_model: sgl.ShaderModel = sgl.ShaderModel.sm_6_6,
 ) -> Context:
     if shader_model > device.supported_shader_model:
         pytest.skip(f"Shader model {str(shader_model)} not supported")
+
+    if buffers is None:
+        buffers = {}
+    if textures is None:
+        textures = {}
+    if params is None:
+        params = {}
+    if vars is None:
+        vars = {}
+    if defines is None:
+        defines = {}
+    if compiler_options is None:
+        compiler_options = {}
 
     compiler_options["shader_model"] = shader_model
     compiler_options["defines"] = defines
@@ -86,10 +101,10 @@ def dispatch_compute(
     kernel = device.create_compute_kernel(program)
 
     ctx = Context()
-    vars = {}
-    params = {}
 
     for name, desc in buffers.items():
+        is_global = kernel.reflection.find_field(name).is_valid()
+
         if isinstance(desc, sgl.Buffer):
             buffer = desc
         else:
@@ -113,13 +128,14 @@ def dispatch_compute(
 
         ctx.buffers[name] = buffer
 
-        is_global = kernel.reflection.find_field(name).is_valid()
         if is_global:
             vars[name] = buffer
         else:
             params[name] = buffer
 
     for name, desc in textures.items():
+        is_global = kernel.reflection.find_field(name).is_valid()
+
         if isinstance(desc, sgl.Texture):
             texture = desc
         else:
@@ -127,7 +143,6 @@ def dispatch_compute(
 
         ctx.textures[name] = texture
 
-        is_global = kernel.reflection.find_field(name).is_valid()
         if is_global:
             vars[name] = texture
         else:

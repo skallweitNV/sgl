@@ -958,4 +958,9 @@ bool DDSFile::decode_header(const uint8_t* data)
     return true;
 }
 
+// bool DDSFile::detect_dds_header(Stream* stream)
+// {
+
+// }
+
 } // namespace sgl

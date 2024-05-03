@@ -70,6 +70,8 @@ public:
 
     virtual std::string to_string() const override;
 
+    static bool detect_dds_header(Stream* stream);
+
 private:
     bool decode_header(const uint8_t* data);
 

@@ -17,6 +17,10 @@ struct ToneMapper {
 
     void execute(uint2 pixel)
     {
+        uint2 output_dim;
+        output.GetDimensions(output_dim.x, output_dim.y);
+        if (any(pixel >= output_dim))
+            return;
         float3 i = input[pixel].xyz;
         float3 o = aces_film(i);
         output[pixel] = float4(o, 1.0);
