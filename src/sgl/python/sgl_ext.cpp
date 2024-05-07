@@ -55,6 +55,7 @@ SGL_PY_DECLARE(utils_renderdoc);
 SGL_PY_DECLARE(utils_tev);
 SGL_PY_DECLARE(utils_texture_loader);
 
+SGL_PY_DECLARE(render_stage);
 
 NB_MODULE(sgl_ext, m_)
 {
@@ -129,6 +130,10 @@ NB_MODULE(sgl_ext, m_)
     SGL_PY_IMPORT(utils_texture_loader);
 
     SGL_PY_IMPORT(app_app);
+
+    m.def_submodule("render", "Render module");
+    SGL_PY_IMPORT(render_stage);
+
 
     // Wait for all tasks to finish before shutting down.
     auto atexit = nb::module_::import_("atexit");

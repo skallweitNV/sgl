@@ -165,6 +165,9 @@ target_sources(sgl PRIVATE
     sgl/utils/texture_loader.cpp
     sgl/utils/texture_loader.h
 
+    sgl/render/scene/stage.cpp
+    sgl/render/scene/scene.cpp
+
     ${SGL_IMGUI_DIR}/imconfig.h
     ${SGL_IMGUI_DIR}/imgui.h
     ${SGL_IMGUI_DIR}/imgui_internal.h
@@ -411,6 +414,7 @@ if(SGL_BUILD_PYTHON)
         sgl/utils/python/renderdoc.cpp
         sgl/utils/python/tev.cpp
         sgl/utils/python/texture_loader.cpp
+        sgl/render/scene/python/stage.cpp
     )
 
     if(SGL_ENABLE_PCH)
@@ -438,7 +442,7 @@ if(SGL_BUILD_PYTHON)
         OUTPUT ${SGL_OUTPUT_DIRECTORY}/python/sgl/__init__.pyi
         DEPENDS sgl_ext
     )
-    foreach(submodule IN ITEMS platform thread math ui tev renderdoc)
+    foreach(submodule IN ITEMS platform thread math ui tev renderdoc render)
         string(REPLACE "." "/" submodule_path ${submodule})
         nanobind_add_stub(
             sgl_${submodule}_stub

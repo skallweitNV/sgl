@@ -4,3 +4,5 @@ add_subdirectory(raytracing_pipeline)
 add_subdirectory(raytracing)
 add_subdirectory(simple_compute)
 add_subdirectory(tinybc)
+
+add_subdirectory(stage)
