@@ -48,6 +48,8 @@ SGL_PY_DECLARE(math_vector);
 SGL_PY_DECLARE(math_matrix);
 SGL_PY_DECLARE(math_quaternion);
 
+SGL_PY_DECLARE(rhi);
+
 SGL_PY_DECLARE(ui);
 SGL_PY_DECLARE(ui_widgets);
 
@@ -117,6 +119,9 @@ NB_MODULE(sgl_ext, m_)
     SGL_PY_IMPORT(device_kernel);
     SGL_PY_IMPORT(device_memory_heap);
     SGL_PY_IMPORT(device_device);
+
+    m.def_submodule("rhi", "RHI module");
+    SGL_PY_IMPORT(rhi);
 
     m.def_submodule("ui", "UI module");
     SGL_PY_IMPORT(ui);

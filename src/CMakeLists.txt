@@ -149,6 +149,24 @@ target_sources(sgl PRIVATE
     sgl/math/vector_types.h
     sgl/math/vector.h
 
+    sgl/rhi/base.cpp
+    sgl/rhi/base.h
+    sgl/rhi/format_infos.cpp
+    sgl/rhi/rhi.cpp
+    sgl/rhi/rhi.h
+    sgl/rhi/validation/validation.cpp
+    sgl/rhi/validation/validation.h
+    sgl/rhi/vulkan/vulkan_api.cpp
+    sgl/rhi/vulkan/vulkan_api.h
+    sgl/rhi/vulkan/vulkan_backend.cpp
+    sgl/rhi/vulkan/vulkan_backend.h
+    sgl/rhi/vulkan/vulkan_buffer.cpp
+    sgl/rhi/vulkan/vulkan_device.cpp
+    sgl/rhi/vulkan/vulkan_sampler.cpp
+    sgl/rhi/vulkan/vulkan_texture.cpp
+    sgl/rhi/vulkan/vulkan_utils.cpp
+    sgl/rhi/vulkan/vulkan_utils.h
+
     sgl/stl/bit.h
 
     sgl/ui/fwd.h
@@ -187,6 +205,7 @@ target_compile_options(sgl
         $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:
             /MP                             # enable multi-processor compilation
             /Zi                             # generate debug symbols
+            /EHsc                           # enable C++ exceptions
             # Configure warnings
             /WX                             # warnings as errors
             /W4                             # increase warning level
@@ -417,6 +436,7 @@ if(SGL_BUILD_PYTHON)
         sgl/math/python/quaternion.cpp
         sgl/math/python/scalar.cpp
         sgl/math/python/vector.cpp
+        sgl/rhi/python/rhi.cpp
         sgl/ui/python/ui.cpp
         sgl/ui/python/widgets.cpp
         sgl/utils/python/renderdoc.cpp
@@ -464,7 +484,7 @@ if(SGL_BUILD_PYTHON)
     postprocess_stub(${SGL_OUTPUT_DIRECTORY}/python/sgl/__init__.pyi)
 
     # Generate submodule stub files.
-    foreach(submodule IN ITEMS platform thread math ui tev renderdoc)
+    foreach(submodule IN ITEMS platform thread math rhi ui tev renderdoc)
         string(REPLACE "." "/" submodule_path ${submodule})
         nanobind_add_stub(
             sgl_${submodule}_stub
