@@ -4,6 +4,20 @@
 
 namespace sgl::rhi {
 
+class HeapBase : public Heap {
+public:
+    HeapBase(const HeapDesc& desc)
+        : m_desc(desc)
+    {
+    }
+
+    virtual const HeapDesc& desc() const override { return m_desc; }
+
+    virtual std::string to_string() const override;
+
+    HeapDesc m_desc;
+};
+
 class BufferBase : public Buffer {
 public:
     BufferBase(const BufferDesc& desc)

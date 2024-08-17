@@ -26,6 +26,7 @@ static VkBool32 debug_message_callback(
 
 DeviceImpl::DeviceImpl(const DeviceDesc& desc, AdapterImpl* adapter)
     : DeviceBase(desc)
+    , m_allocator(m_ctx)
 {
     m_info.api = GraphicsAPI::vulkan;
     m_info.limits = {};
@@ -279,12 +280,9 @@ void DeviceImpl::initialize_instance_and_device(
         // device_create_info.enabledExtensionCount = uint32_t(device_extensions.getCount());
         // device_create_info.ppEnabledExtensionNames = deviceExtensions.getBuffer();
 
-        SGL_VK_CHECK(m_ctx.api.vkCreateDevice(
-            physical_device,
-            &device_create_info,
-            m_ctx.vk_allocation_callbacks,
-            &device
-        ));
+        SGL_VK_CHECK(
+            m_ctx.api.vkCreateDevice(physical_device, &device_create_info, m_ctx.vk_allocation_callbacks, &device)
+        );
     }
 
     if (!device)

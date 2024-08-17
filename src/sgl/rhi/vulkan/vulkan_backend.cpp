@@ -9,6 +9,17 @@
 
 namespace sgl::rhi::vulkan {
 
+void VulkanContext::name_vk_object(void* object, VkDebugReportObjectTypeEXT object_type, const char* name) const
+{
+    if (api.vkDebugMarkerSetObjectNameEXT && name && *name && object) {
+        VkDebugMarkerObjectNameInfoEXT info = {VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT};
+        info.object = reinterpret_cast<uint64_t>(object);
+        info.objectType = object_type;
+        info.pObjectName = name;
+        api.vkDebugMarkerSetObjectNameEXT(vk_device, &info);
+    }
+}
+
 ref<Device> AdapterImpl::create_device(const DeviceDesc& desc)
 {
     ref<Device> device(new DeviceImpl(desc, this));

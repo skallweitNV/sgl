@@ -8,6 +8,13 @@
 
 namespace sgl {
 
+template<typename To, typename From>
+To checked_cast(From value)
+{
+    SGL_ASSERT(dynamic_cast<To>(value) == static_cast<To>(value));
+    return static_cast<To>(value);
+}
+
 template<typename R, typename T>
 R narrow_cast(T value)
 {

@@ -41,6 +41,9 @@ inline GraphicsAPI resolve_default_api(GraphicsAPI api)
 namespace vulkan {
     extern std::vector<ref<Adapter>> enum_adapters();
 }
+namespace metal {
+    extern std::vector<ref<Adapter>> enum_adapters();
+}
 
 std::vector<ref<Adapter>> enum_adapters(GraphicsAPI api)
 {
@@ -50,8 +53,8 @@ std::vector<ref<Adapter>> enum_adapters(GraphicsAPI api)
     //     return d3d12::enum_adapters();
     case GraphicsAPI::vulkan:
         return vulkan::enum_adapters();
-    // case GraphicsAPI::metal:
-    //     return metal::enum_adapters();
+    case GraphicsAPI::metal:
+        return metal::enum_adapters();
     default:
         return {};
     }

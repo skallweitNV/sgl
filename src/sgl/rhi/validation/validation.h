@@ -17,8 +17,15 @@ public:
     virtual const DeviceDesc& desc() const override { return inner->desc(); }
     virtual const DeviceInfo& info() const override { return inner->info(); }
 
+    virtual ref<Heap> create_heap(const HeapDesc& desc) override;
     virtual ref<Buffer> create_buffer(const BufferDesc& desc) override;
+    virtual ref<Buffer> create_buffer_on_heap(const BufferDesc& desc, Heap* heap, uint64_t offset) override;
+    virtual SizeAndAlign get_buffer_size_and_align(const BufferDesc& desc) override;
+    virtual void* map_buffer(Buffer* buffer, BufferRange range) override;
+    virtual void unmap_buffer(Buffer* buffer) override;
     virtual ref<Texture> create_texture(const TextureDesc& desc) override;
+    virtual ref<Texture> create_texture_on_heap(const TextureDesc& desc, Heap* heap, uint64_t offset) override;
+    virtual SizeAndAlign get_texture_size_and_align(const TextureDesc& desc) override;
     virtual ref<Sampler> create_sampler(const SamplerDesc& desc) override;
 
     virtual std::string to_string() const override { return inner->to_string(); }

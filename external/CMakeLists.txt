@@ -21,6 +21,12 @@ endmacro()
 add_library(d3d12 INTERFACE)
 target_link_libraries(d3d12 INTERFACE dxgi.lib d3d12.lib dxguid.lib)
 
+# metal-cpp
+
+add_library(metal-cpp INTERFACE)
+target_include_directories(metal-cpp INTERFACE metal-cpp)
+target_link_libraries(metal-cpp INTERFACE "-framework Metal" "-framework QuartzCore")
+
 # nanobind
 
 if(SGL_BUILD_PYTHON)

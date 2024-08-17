@@ -156,16 +156,26 @@ target_sources(sgl PRIVATE
     sgl/rhi/rhi.h
     sgl/rhi/validation/validation.cpp
     sgl/rhi/validation/validation.h
+    sgl/rhi/vulkan/vulkan_allocator.cpp
     sgl/rhi/vulkan/vulkan_api.cpp
     sgl/rhi/vulkan/vulkan_api.h
     sgl/rhi/vulkan/vulkan_backend.cpp
     sgl/rhi/vulkan/vulkan_backend.h
     sgl/rhi/vulkan/vulkan_buffer.cpp
     sgl/rhi/vulkan/vulkan_device.cpp
+    sgl/rhi/vulkan/vulkan_heap.cpp
     sgl/rhi/vulkan/vulkan_sampler.cpp
     sgl/rhi/vulkan/vulkan_texture.cpp
     sgl/rhi/vulkan/vulkan_utils.cpp
     sgl/rhi/vulkan/vulkan_utils.h
+    sgl/rhi/metal/metal_api.cpp
+    sgl/rhi/metal/metal_backend.cpp
+    sgl/rhi/metal/metal_buffer.cpp
+    sgl/rhi/metal/metal_device.cpp
+    sgl/rhi/metal/metal_heap.cpp
+    sgl/rhi/metal/metal_sampler.cpp
+    sgl/rhi/metal/metal_texture.cpp
+    sgl/rhi/metal/metal_utils.cpp
 
     sgl/stl/bit.h
 
@@ -358,6 +368,7 @@ target_link_libraries(sgl
     PRIVATE
         git_version
         glfw stb header_only
+        metal-cpp
         $<$<BOOL:${SGL_HAS_D3D12}>:d3d12>
         $<$<BOOL:${SGL_HAS_AGILITY_SDK}>:agility_sdk>
         # $<$<BOOL:${SGL_HAS_AFTERMATH}>:aftermath>

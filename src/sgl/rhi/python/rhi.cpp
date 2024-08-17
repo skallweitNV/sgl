@@ -85,10 +85,15 @@ inline void bind_rhi(nb::module_& m)
     // Resources
     // -------------------------------------------------------------------------
 
-    nb::class_<Resource, Object>(m, "Resource")
+    nb::class_<Resource, Object>(m, "Resource", D_NA(Resource))
         .def("get_native_handle", &Resource::get_native_handle, D_NA(Resource, get_native_handle));
 
     nb::sgl_enum<MemoryType>(m, "MemoryType", D_NA(MemoryType));
+
+    nb::class_<SizeAndAlign>(m, "SizeAndAlign", D_NA(SizeAndAlign))
+        .def_ro("size", &SizeAndAlign::size, D_NA(SizeAndAlign, size))
+        .def_ro("align", &SizeAndAlign::align, D_NA(SizeAndAlign, align));
+
     nb::sgl_enum_flags<ResourceState>(m, "ResourceState", D_NA(ResourceState));
 
     // -------------------------------------------------------------------------
@@ -101,7 +106,9 @@ inline void bind_rhi(nb::module_& m)
         .def_rw("offset", &BufferRange::offset, D_NA(BufferRange, offset));
 
     // TODO
-    nb::class_<BufferDesc>(m, "BufferDesc", D_NA(BufferDesc));
+    nb::class_<BufferDesc>(m, "BufferDesc", D_NA(BufferDesc))
+        .def(nb::init<>())
+        .def_rw("size", &BufferDesc::size, D_NA(BufferDesc, size));
 
     nb::class_<Buffer, Resource>(m, "Buffer")
         .def_prop_ro("desc", &Buffer::desc, D_NA(Buffer, desc))
@@ -242,6 +249,65 @@ inline void bind_rhi(nb::module_& m)
     nb::class_<Device, Object>(m, "Device", D_NA(Device))
         .def_prop_ro("desc", &Device::desc, D_NA(Device, desc))
         .def_prop_ro("info", &Device::info, D_NA(Device, info))
+        .def(
+            "create_heap",
+            [](Device& self, uint64_t size, MemoryType memory_type, std::string debug_name)
+            {
+                return self.create_heap({
+                    .size = size,
+                    .memory_type = memory_type,
+                    .debug_name = debug_name,
+                });
+            },
+            "size"_a,
+            "memory_type"_a = HeapDesc{}.memory_type,
+            "debug_name"_a = HeapDesc{}.debug_name,
+            D_NA(Device, create_heap)
+        )
+        .def("create_heap", &Device::create_heap, "desc"_a, D_NA(Device, create_heap))
+        .def(
+            "create_buffer",
+            [](Device& self,
+               uint64_t size,
+               Format format,
+               std::string debug_name,
+               MemoryType memory_type,
+               ResourceState default_state,
+               ResourceState allowed_states,
+               bool is_vertex_buffer,
+               bool is_index_buffer,
+               bool is_shared)
+            {
+                return self.create_buffer({
+                    .size = size,
+                    .format = format,
+                    .debug_name = debug_name,
+                    .memory_type = memory_type,
+                    .default_state = default_state,
+                    .allowed_states = allowed_states,
+                    .is_vertex_buffer = is_vertex_buffer,
+                    .is_index_buffer = is_index_buffer,
+                    .is_shared = is_shared,
+                });
+            },
+            "size"_a,
+            "format"_a = BufferDesc{}.format,
+            "debug_name"_a = BufferDesc{}.debug_name,
+            "memory_type"_a = BufferDesc{}.memory_type,
+            "default_state"_a = BufferDesc{}.default_state,
+            "allowed_states"_a = BufferDesc{}.allowed_states,
+            "is_vertex_buffer"_a = BufferDesc{}.is_vertex_buffer,
+            "is_index_buffer"_a = BufferDesc{}.is_index_buffer,
+            "is_shared"_a = BufferDesc{}.is_shared,
+            D_NA(Device, create_buffer)
+        )
+        .def("create_buffer", &Device::create_buffer, "desc"_a, D_NA(Device, create_buffer))
+        .def(
+            "get_buffer_size_and_align",
+            &Device::get_buffer_size_and_align,
+            "desc"_a,
+            D_NA(Device, get_buffer_size_and_align)
+        )
         .def(
             "create_sampler",
             [](Device& self,

@@ -68,6 +68,44 @@ struct VulkanContext {
     VkPhysicalDeviceProperties physical_device_properties;
     VkPhysicalDeviceFeatures physical_device_features;
     VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
+
+    void name_vk_object(void* object, VkDebugReportObjectTypeEXT object_type, const char* name) const;
+};
+
+struct MemoryAllocation {
+    VkDeviceMemory vk_device_memory{VK_NULL_HANDLE};
+};
+
+class VulkanAllocator {
+public:
+    VulkanAllocator(VulkanContext& ctx);
+    ~VulkanAllocator();
+
+    MemoryAllocation allocate_memory(
+        VkMemoryRequirements requirements,
+        VkMemoryPropertyFlags flags,
+        bool enable_device_address = false,
+        bool enable_export_memory = false
+    );
+    void free_memory(MemoryAllocation& allocation);
+
+private:
+    VulkanContext& m_ctx;
+};
+
+// ----------------------------------------------------------------------------
+// HeapImpl
+// ----------------------------------------------------------------------------
+
+class HeapImpl : public HeapBase {
+public:
+    HeapImpl(ref<DeviceImpl> device, const HeapDesc& desc);
+    virtual ~HeapImpl();
+
+    virtual NativeHandle get_native_handle(NativeHandleType type) const override;
+
+    ref<DeviceImpl> device;
+    // VkBuffer vk_buffer{VK_NULL_HANDLE};
 };
 
 // ----------------------------------------------------------------------------
@@ -84,7 +122,10 @@ public:
     virtual DeviceAddress device_address() const override;
 
     ref<DeviceImpl> device;
+    ref<HeapImpl> heap;
     VkBuffer vk_buffer{VK_NULL_HANDLE};
+    VkDeviceAddress vk_device_address{0};
+    MemoryAllocation memory;
 };
 
 // ----------------------------------------------------------------------------
@@ -128,11 +169,19 @@ public:
     DeviceImpl(const DeviceDesc& desc, AdapterImpl* adapter);
     virtual ~DeviceImpl();
 
+    virtual ref<Heap> create_heap(const HeapDesc& desc) override;
     virtual ref<Buffer> create_buffer(const BufferDesc& desc) override;
+    virtual ref<Buffer> create_buffer_on_heap(const BufferDesc& desc, Heap* heap, uint64_t offset) override;
+    virtual SizeAndAlign get_buffer_size_and_align(const BufferDesc& desc) override;
+    virtual void* map_buffer(Buffer* buffer, BufferRange range) override;
+    virtual void unmap_buffer(Buffer* buffer) override;
     virtual ref<Texture> create_texture(const TextureDesc& desc) override;
+    virtual ref<Texture> create_texture_on_heap(const TextureDesc& desc, Heap* heap, uint64_t offset) override;
+    virtual SizeAndAlign get_texture_size_and_align(const TextureDesc& desc) override;
     virtual ref<Sampler> create_sampler(const SamplerDesc& desc) override;
 
     VulkanContext m_ctx;
+    VulkanAllocator m_allocator;
 
     VkDebugReportCallbackEXT m_vk_debug_report_callback{VK_NULL_HANDLE};
 

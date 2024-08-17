@@ -157,6 +157,7 @@ SGL_ENUM_REGISTER(GraphicsAPI);
 enum class NativeHandleType {
     win32_handle = 0x000,    ///< General Win32 HANDLE.
     file_descriptor = 0x001, ///< General file descriptor.
+    shared_handle = 0x002,   ///< General shared handle.
 
     d3d12_device = 0x100,
     d3d12_command_queue = 0x101,
@@ -191,7 +192,13 @@ enum class NativeHandleType {
     vk_pipeline = 0x212,
     vk_micromap = 0x213,
 
-    cu_device = 0x300,
+    mtl_device = 0x300,
+    mtl_heap = 0x301,
+    mtl_buffer = 0x302,
+    mtl_texture = 0x303,
+    mtl_sampler_state = 0x304,
+
+    cu_device = 0x400,
 };
 
 struct NativeHandle {
@@ -426,6 +433,11 @@ SGL_ENUM_INFO(
 );
 SGL_ENUM_REGISTER(MemoryType);
 
+struct SizeAndAlign {
+    uint64_t size{0};
+    uint64_t align{0};
+};
+
 enum class ResourceState : uint32_t {
     undefined = 0,
     common = (1 << 0),
@@ -476,6 +488,22 @@ SGL_ENUM_REGISTER(ResourceState);
 SGL_ENUM_CLASS_OPERATORS(ResourceState);
 
 // -----------------------------------------------------------------------------
+// Heap
+// -----------------------------------------------------------------------------
+
+struct HeapDesc {
+    uint64_t size{0};
+    MemoryType memory_type{MemoryType::device_local};
+    std::string debug_name;
+};
+
+class Heap : public Resource {
+    SGL_OBJECT(Heap)
+public:
+    virtual const HeapDesc& desc() const = 0;
+};
+
+// -----------------------------------------------------------------------------
 // Buffer
 // -----------------------------------------------------------------------------
 
@@ -515,6 +543,9 @@ struct BufferDesc {
     ResourceState default_state{ResourceState::undefined};
     ResourceState allowed_states{ResourceState::undefined};
 
+    bool is_vertex_buffer{false};
+    bool is_index_buffer{false};
+
     bool is_shared{false};
 };
 
@@ -528,6 +559,36 @@ public:
 // -----------------------------------------------------------------------------
 // Texture
 // -----------------------------------------------------------------------------
+
+enum class TextureDimension : uint8_t {
+    unknown,
+    texture_1d,
+    texture_1d_array,
+    texture_2d,
+    texture_2d_array,
+    texture_cube,
+    texture_cube_array,
+    texture_2d_ms,
+    texture_2d_ms_array,
+    texture_3d,
+};
+
+SGL_ENUM_INFO(
+    TextureDimension,
+    {
+        {TextureDimension::unknown, "unknown"},
+        {TextureDimension::texture_1d, "texture_1d"},
+        {TextureDimension::texture_1d_array, "texture_1d_array"},
+        {TextureDimension::texture_2d, "texture_2d"},
+        {TextureDimension::texture_2d_array, "texture_2d_array"},
+        {TextureDimension::texture_cube, "texture_cube"},
+        {TextureDimension::texture_cube_array, "texture_cube_array"},
+        {TextureDimension::texture_2d_ms, "texture_2d_ms"},
+        {TextureDimension::texture_2d_ms_array, "texture_2d_ms_array"},
+        {TextureDimension::texture_3d, "texture_3d"},
+    }
+);
+SGL_ENUM_REGISTER(TextureDimension);
 
 using MipLevel = uint32_t;
 using ArraySlice = uint32_t;
@@ -551,7 +612,24 @@ struct TextureSubresourceSet { };
 
 static const TextureSubresourceSet ENTIRE_TEXTURE{};
 
-struct TextureDesc { };
+struct TextureDesc {
+    TextureDimension type{TextureDimension::unknown};
+    Format format{Format::unknown};
+    uint32_t width{0};
+    uint32_t height{0};
+    uint32_t depth{0};
+    uint32_t array_size{0};
+    uint32_t mip_levels{0};
+    uint32_t sample_count{1};
+    uint32_t sample_quality{0};
+
+    std::string debug_name;
+
+    bool is_shader_resource{false};
+    bool is_render_target{false};
+    bool is_uav{false};
+    bool is_typeless{false};
+};
 
 class Texture : public Resource {
     SGL_OBJECT(Resource)
@@ -1016,11 +1094,25 @@ public:
 
     // virtual SLANG_NO_THROW bool SLANG_MCALL hasFeature(const char* feature) = 0;
 
+    /// Create a new heap resource.
+    virtual ref<Heap> create_heap(const HeapDesc& desc) = 0;
+
     /// Creates a new buffer resource.
     virtual ref<Buffer> create_buffer(const BufferDesc& desc) = 0;
 
+    /// Creates a new buffer on a heap.
+    virtual ref<Buffer> create_buffer_on_heap(const BufferDesc& desc, Heap* heap, uint64_t offset) = 0;
+    virtual SizeAndAlign get_buffer_size_and_align(const BufferDesc& desc) = 0;
+
+    virtual void* map_buffer(Buffer* buffer, BufferRange range = ENTIRE_BUFFER) = 0;
+    virtual void unmap_buffer(Buffer* buffer) = 0;
+
     /// Creates a new texture resource.
     virtual ref<Texture> create_texture(const TextureDesc& desc) = 0;
+
+    /// Creates a new texture on a heap.
+    virtual ref<Texture> create_texture_on_heap(const TextureDesc& desc, Heap* heap, uint64_t offset) = 0;
+    virtual SizeAndAlign get_texture_size_and_align(const TextureDesc& desc) = 0;
 
     /// Creates a new sampler.
     virtual ref<Sampler> create_sampler(const SamplerDesc& desc) = 0;

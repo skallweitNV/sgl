@@ -5,9 +5,42 @@
 
 namespace sgl::rhi {
 
+std::string HeapBase::to_string() const
+{
+    return fmt::format(
+        "Heap(\n"
+        "  size = {},\n"
+        "  memory_type = {},\n"
+        "  debug_name = \"{}\",\n"
+        ")",
+        m_desc.size,
+        m_desc.memory_type,
+        m_desc.debug_name
+    );
+}
+
 std::string BufferBase::to_string() const
 {
-    return "Buffer";
+    return fmt::format(
+        "Buffer(\n"
+        "  size = {},\n"
+        "  format = {},\n"
+        "  debug_name = \"{}\",\n"
+        "  memory_type = {},\n"
+        "  default_state = {},\n"
+        "  allowed_states = {},\n"
+        "  is_shared = {},\n"
+        "  device_address = {},\n"
+        ")",
+        m_desc.size,
+        m_desc.format,
+        m_desc.debug_name,
+        m_desc.memory_type,
+        m_desc.default_state,
+        m_desc.allowed_states,
+        m_desc.is_shared,
+        device_address()
+    );
 }
 
 std::string TextureBase::to_string() const
