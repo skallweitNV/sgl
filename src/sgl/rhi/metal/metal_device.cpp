@@ -12,6 +12,8 @@ DeviceImpl::DeviceImpl(const DeviceDesc& desc, AdapterImpl* adapter)
 
     // TODO use correct device
     m_ctx.device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
+
+    m_ctx.device->supportsRaytracing();
 }
 
 DeviceImpl::~DeviceImpl() { }

@@ -1,57 +1,68 @@
-#include "metal_backend.h"
-#include "metal_utils.h"
+#include "cuda_backend.h"
+#include "cuda_utils.h"
 
 #include "sgl/core/type_utils.h"
 #include "sgl/core/maths.h"
 
-namespace sgl::rhi::metal {
+namespace sgl::rhi::cuda {
 
 BufferImpl::BufferImpl(ref<DeviceImpl> device, const BufferDesc& desc)
     : BufferBase(desc)
     , device(device)
 {
-    MTL::ResourceOptions resource_options = MTL::ResourceOptions(0);
-    switch (desc.memory_type) {
-    case MemoryType::device_local:
-        resource_options = MTL::ResourceStorageModePrivate;
-        break;
-    case MemoryType::upload:
-        resource_options = MTL::ResourceStorageModeShared | MTL::CPUCacheModeWriteCombined;
-        break;
-    case MemoryType::read_back:
-        resource_options = MTL::ResourceStorageModeShared;
-        break;
-    }
-    resource_options |= (desc.memory_type == MemoryType::device_local) ? MTL::ResourceStorageModePrivate
-                                                                       : MTL::ResourceStorageModeShared;
-
-    mtl_buffer = NS::TransferPtr(device->m_ctx.device->newBuffer(desc.size, resource_options));
-    SGL_CHECK(mtl_buffer, "Failed to create buffer");
 }
 
-BufferImpl::~BufferImpl() { }
+BufferImpl::~BufferImpl() {
+    switch (m_desc.memory_type) {
+    case MemoryType::device_local:
+        SGL_CU_CHECK(cuMemFree(cu_device_ptr));
+        break;
+    case MemoryType::upload:
+    case MemoryType::read_back:
+        SGL_CU_CHECK(cuMemFreeHost(cu_host_ptr));
+        break;
+    }
+}
+
+bool BufferImpl::init()
+{
+    if (m_desc.size == 0)
+        return false;
+
+    switch (m_desc.memory_type) {
+    case MemoryType::device_local:
+        SGL_CU_CHECK(cuMemAlloc(&cu_device_ptr, m_desc.size));
+        break;
+    case MemoryType::upload:
+    case MemoryType::read_back:
+        SGL_CU_CHECK(cuMemAllocHost(&cu_host_ptr, m_desc.size));
+        break;
+    }
+    return true;
+}
 
 NativeHandle BufferImpl::get_native_handle(NativeHandleType type) const
 {
-    if (type == NativeHandleType::mtl_buffer)
-        return NativeHandle(mtl_buffer.get());
+    if (type == NativeHandleType::cu_device_ptr)
+        return NativeHandle(cu_device_ptr);
     return {};
 }
 
 DeviceAddress BufferImpl::device_address() const
 {
-    return mtl_buffer->gpuAddress();
+    return DeviceAddress(cu_device_ptr);
 }
 
 ref<Buffer> DeviceImpl::create_buffer(const BufferDesc& desc)
 {
-    AUTORELEASEPOOL
-    return ref(new BufferImpl(ref(this), desc));
+    ref<BufferImpl> buffer = ref(new BufferImpl(ref(this), desc));
+    if (!buffer->init())
+        return nullptr;
+    return buffer;
 }
 
 ref<Buffer> DeviceImpl::create_buffer_on_heap(const BufferDesc& desc, Heap* heap, uint64_t offset)
 {
-    AUTORELEASEPOOL
     ref<BufferImpl> buffer = ref(new BufferImpl(ref(this), desc));
     // TODO: bind heap memory
     return buffer;
@@ -67,7 +78,9 @@ SizeAndAlign DeviceImpl::get_buffer_size_and_align(const BufferDesc& desc)
 void* DeviceImpl::map_buffer(Buffer* buffer_, BufferRange range)
 {
     BufferImpl* buffer = checked_cast<BufferImpl*>(buffer_);
-    return reinterpret_cast<uint8_t*>(buffer->mtl_buffer->contents()) + range.offset;
+    if (buffer->m_desc.memory_type == MemoryType::device_local)
+        return nullptr;
+    return reinterpret_cast<uint8_t*>(buffer->cu_host_ptr) + range.offset;
 }
 
 void DeviceImpl::unmap_buffer(Buffer* buffer_)
@@ -75,4 +88,4 @@ void DeviceImpl::unmap_buffer(Buffer* buffer_)
     BufferImpl* buffer = checked_cast<BufferImpl*>(buffer_);
 }
 
-} // namespace sgl::rhi::metal
+} // namespace sgl::rhi::cuda

@@ -199,6 +199,7 @@ enum class NativeHandleType {
     mtl_sampler_state = 0x304,
 
     cu_device = 0x400,
+    cu_device_ptr = 0x401,
 };
 
 struct NativeHandle {

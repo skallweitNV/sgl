@@ -154,6 +154,17 @@ target_sources(sgl PRIVATE
     sgl/rhi/format_infos.cpp
     sgl/rhi/rhi.cpp
     sgl/rhi/rhi.h
+    sgl/rhi/cuda/cuda_backend.cpp
+    sgl/rhi/cuda/cuda_buffer.cpp
+    sgl/rhi/cuda/cuda_device.cpp
+    sgl/rhi/metal/metal_api.cpp
+    sgl/rhi/metal/metal_backend.cpp
+    sgl/rhi/metal/metal_buffer.cpp
+    sgl/rhi/metal/metal_device.cpp
+    sgl/rhi/metal/metal_heap.cpp
+    sgl/rhi/metal/metal_sampler.cpp
+    sgl/rhi/metal/metal_texture.cpp
+    sgl/rhi/metal/metal_utils.cpp
     sgl/rhi/validation/validation.cpp
     sgl/rhi/validation/validation.h
     sgl/rhi/vulkan/vulkan_allocator.cpp
@@ -168,14 +179,6 @@ target_sources(sgl PRIVATE
     sgl/rhi/vulkan/vulkan_texture.cpp
     sgl/rhi/vulkan/vulkan_utils.cpp
     sgl/rhi/vulkan/vulkan_utils.h
-    sgl/rhi/metal/metal_api.cpp
-    sgl/rhi/metal/metal_backend.cpp
-    sgl/rhi/metal/metal_buffer.cpp
-    sgl/rhi/metal/metal_device.cpp
-    sgl/rhi/metal/metal_heap.cpp
-    sgl/rhi/metal/metal_sampler.cpp
-    sgl/rhi/metal/metal_texture.cpp
-    sgl/rhi/metal/metal_utils.cpp
 
     sgl/stl/bit.h
 

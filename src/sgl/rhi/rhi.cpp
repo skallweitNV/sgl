@@ -44,6 +44,9 @@ namespace vulkan {
 namespace metal {
     extern std::vector<ref<Adapter>> enum_adapters();
 }
+namespace cuda {
+    extern std::vector<ref<Adapter>> enum_adapters();
+}
 
 std::vector<ref<Adapter>> enum_adapters(GraphicsAPI api)
 {
@@ -55,6 +58,8 @@ std::vector<ref<Adapter>> enum_adapters(GraphicsAPI api)
         return vulkan::enum_adapters();
     case GraphicsAPI::metal:
         return metal::enum_adapters();
+    case GraphicsAPI::cuda:
+        return cuda::enum_adapters();
     default:
         return {};
     }
