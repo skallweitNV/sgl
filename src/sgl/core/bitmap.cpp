@@ -94,6 +94,7 @@ derivative works thereof, in binary and source code form.
 #include <stb_image_write.h>
 
 #include <algorithm>
+#include <map>
 
 SGL_DISABLE_MSVC_WARNING(4611)
 
@@ -236,13 +237,9 @@ void Bitmap::write(Stream* stream, FileFormat format, int quality) const
 #endif
         break;
     case FileFormat::jpg:
-#if SGL_HAS_JPEG
         if (quality == -1)
             quality = 100;
         write_jpg(stream, quality);
-#else
-        SGL_THROW("JPEG support is not available!");
-#endif
         break;
     case FileFormat::bmp:
         write_bmp(stream);
@@ -526,14 +523,11 @@ Bitmap::FileFormat Bitmap::detect_file_format(Stream* stream)
         format = FileFormat::bmp;
     } else if (header[0] == '#' && header[1] == '?') {
         format = FileFormat::hdr;
-#if SGL_HAS_JPEG
     } else if (header[0] == 0xFF && header[1] == 0xD8) {
         format = FileFormat::jpg;
-#endif
-#if SGL_HAS_PNG
-    } else if (png_sig_cmp(header, 0, 8) == 0) {
+    } else if (header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47 && header[4] == 0x0D
+               && header[5] == 0x0A && header[6] == 0x1A && header[7] == 0x0A) {
         format = FileFormat::png;
-#endif
 #if SGL_HAS_OPENEXR
     } else if (Imf::isImfMagic(reinterpret_cast<const char*>(header))) {
         format = FileFormat::exr;
@@ -623,18 +617,10 @@ void Bitmap::read(Stream* stream, FileFormat format)
 
     switch (format) {
     case FileFormat::png:
-#if SGL_HAS_PNG
         read_png(stream);
-#else
-        SGL_THROW("PNG support is not available!");
-#endif
         break;
     case FileFormat::jpg:
-#if SGL_HAS_JPEG
         read_jpg(stream);
-#else
-        SGL_THROW("JPEG support is not available!");
-#endif
         break;
     case FileFormat::bmp:
         read_bmp(stream);
@@ -685,6 +671,89 @@ void Bitmap::check_required_format(
 // STB I/O
 // ----------------------------------------------------------------------------
 
+static void stbi_write_func(void* context, void* data, int size)
+{
+    static_cast<Stream*>(context)->write(data, size);
+}
+
+struct StreamReader {
+    Stream* stream;
+    size_t initial_pos;
+    bool is_eof{false};
+    stbi_io_callbacks callbacks;
+
+    StreamReader(Stream* stream)
+        : stream(stream)
+        , initial_pos(stream->tell())
+        , callbacks({.read = &read, .skip = &skip, .eof = &eof})
+    {
+    }
+
+    void reset() { stream->seek(initial_pos); }
+
+    static int read(void* user, char* data, int size)
+    {
+        StreamReader* reader = static_cast<StreamReader*>(user);
+        try {
+            reader->stream->read(data, size);
+            return size;
+        } catch (const EOFException& e) {
+            reader->is_eof = true;
+            return static_cast<int>(e.gcount());
+        }
+    }
+
+    static void skip(void* user, int n)
+    {
+        StreamReader* reader = static_cast<StreamReader*>(user);
+        reader->stream->seek(reader->stream->tell() + n);
+    }
+
+    static int eof(void* user)
+    {
+        StreamReader* reader = static_cast<StreamReader*>(user);
+        return reader->is_eof;
+    }
+};
+
+void Bitmap::read_stb(Stream* stream, const char* format, bool is_srgb, bool is_hdr)
+{
+    StreamReader reader(stream);
+    int w, h, c;
+    if (!stbi_info_from_callbacks(&reader.callbacks, &reader, &w, &h, &c))
+        SGL_THROW(fmt::format("Failed to read {} file!", format));
+    reader.reset();
+
+    m_width = w;
+    m_height = h;
+    m_pixel_format = c == 3 ? PixelFormat::rgb : PixelFormat::rgba;
+    m_component_type = ComponentType::uint8;
+    m_srgb_gamma = is_srgb;
+
+    rebuild_pixel_struct();
+
+    auto fs = dynamic_cast<FileStream*>(stream);
+    log_debug(
+        "Reading {} file \"{}\" ({}x{}, {}, {}) ...",
+        format,
+        fs ? fs->path().string() : "<stream>",
+        m_width,
+        m_height,
+        m_pixel_format,
+        m_component_type
+    );
+
+    void* data = is_hdr ? (void*)stbi_loadf_from_callbacks(&reader.callbacks, &reader, &w, &h, &c, c)
+                        : (void*)stbi_load_from_callbacks(&reader.callbacks, &reader, &w, &h, &c, c);
+    if (!data)
+        SGL_THROW(fmt::format("Failed to read {} file!", format));
+
+    SGL_ASSERT_EQ(m_width, static_cast<uint32_t>(w));
+    SGL_ASSERT_EQ(m_height, static_cast<uint32_t>(h));
+
+    m_data = std::unique_ptr<uint8_t[]>(reinterpret_cast<uint8_t*>(data));
+    m_owns_data = true;
+}
 
 // ----------------------------------------------------------------------------
 // PNG I/O
@@ -980,6 +1049,35 @@ void Bitmap::write_png(Stream* stream, int compression) const
     // delete[] text;
 }
 
+#else // SGL_HAS_PNG
+
+void Bitmap::read_png(Stream* stream)
+{
+    read_stb(stream, "PNG", true, false);
+}
+
+void Bitmap::write_png(Stream* stream, int compression) const
+{
+    check_required_format(
+        "PNG",
+        {PixelFormat::y, PixelFormat::ya, PixelFormat::rgb, PixelFormat::rgba},
+        {ComponentType::uint8, ComponentType::uint16}
+    );
+
+    stbi_write_png_compression_level = compression;
+    if (!stbi_write_png_to_func(
+            &stbi_write_func,
+            stream,
+            m_width,
+            m_height,
+            int(channel_count()),
+            data(),
+            int(m_width * channel_count())
+        ))
+        ;
+    SGL_THROW("Failed to write PNG file!");
+}
+
 #endif // SGL_HAS_PNG
 
 // ----------------------------------------------------------------------------
@@ -1219,92 +1317,30 @@ void Bitmap::write_jpg(Stream* stream, int quality) const
     jpeg_destroy_compress(&cinfo);
 }
 
+#else // SGL_HAS_JPEG
+
+void Bitmap::read_jpg(Stream* stream)
+{
+    read_stb(stream, "JPEG", true, false);
+}
+
+void Bitmap::write_jpg(Stream* stream, int quality) const
+{
+    check_required_format("JPEG", {PixelFormat::y, PixelFormat::rgb}, {ComponentType::uint8});
+
+    if (!stbi_write_jpg_to_func(&stbi_write_func, stream, m_width, m_height, int(channel_count()), data(), quality))
+        SGL_THROW("Failed to write JPEG file!");
+}
+
 #endif // SGL_HAS_JPEG
 
 // ----------------------------------------------------------------------------
 // BMP I/O
 // ----------------------------------------------------------------------------
 
-static void stbi_write_func(void* context, void* data, int size)
-{
-    static_cast<Stream*>(context)->write(data, size);
-}
-
-struct StreamReader {
-    Stream* stream;
-    size_t initial_pos;
-    bool is_eof{false};
-    stbi_io_callbacks callbacks;
-
-    StreamReader(Stream* stream)
-        : stream(stream)
-        , initial_pos(stream->tell())
-        , callbacks({.read = &read, .skip = &skip, .eof = &eof})
-    {
-    }
-
-    void reset() { stream->seek(initial_pos); }
-
-    static int read(void* user, char* data, int size)
-    {
-        StreamReader* reader = static_cast<StreamReader*>(user);
-        try {
-            reader->stream->read(data, size);
-            return size;
-        } catch (const EOFException& e) {
-            reader->is_eof = true;
-            return static_cast<int>(e.gcount());
-        }
-    }
-
-    static void skip(void* user, int n)
-    {
-        StreamReader* reader = static_cast<StreamReader*>(user);
-        reader->stream->seek(reader->stream->tell() + n);
-    }
-
-    static int eof(void* user)
-    {
-        StreamReader* reader = static_cast<StreamReader*>(user);
-        return reader->is_eof;
-    }
-};
-
 void Bitmap::read_bmp(Stream* stream)
 {
-    StreamReader reader(stream);
-    int w, h, c;
-    if (!stbi_info_from_callbacks(&reader.callbacks, &reader, &w, &h, &c))
-        SGL_THROW("Failed to read BMP file!");
-    reader.reset();
-
-    m_width = w;
-    m_height = h;
-    m_pixel_format = c == 3 ? PixelFormat::rgb : PixelFormat::rgba;
-    m_component_type = ComponentType::uint8;
-    m_srgb_gamma = true;
-
-    rebuild_pixel_struct();
-
-    auto fs = dynamic_cast<FileStream*>(stream);
-    log_debug(
-        "Reading BMP file \"{}\" ({}x{}, {}, {}) ...",
-        fs ? fs->path().string() : "<stream>",
-        m_width,
-        m_height,
-        m_pixel_format,
-        m_component_type
-    );
-
-    uint8_t* data = stbi_load_from_callbacks(&reader.callbacks, &reader, &w, &h, &c, c);
-    if (!data)
-        SGL_THROW("Failed to read BMP file!");
-
-    SGL_ASSERT_EQ(m_width, static_cast<uint32_t>(w));
-    SGL_ASSERT_EQ(m_height, static_cast<uint32_t>(h));
-
-    m_data = std::unique_ptr<uint8_t[]>(data);
-    m_owns_data = true;
+    read_stb(stream, "BMP", false, false);
 }
 
 void Bitmap::write_bmp(Stream* stream) const
@@ -1321,39 +1357,7 @@ void Bitmap::write_bmp(Stream* stream) const
 
 void Bitmap::read_tga(Stream* stream)
 {
-    StreamReader reader(stream);
-    int w, h, c;
-    if (!stbi_info_from_callbacks(&reader.callbacks, &reader, &w, &h, &c))
-        SGL_THROW("Failed to read TGA file!");
-    reader.reset();
-
-    m_width = w;
-    m_height = h;
-    m_pixel_format = c == 1 ? PixelFormat::y : (c == 3 ? PixelFormat::rgb : PixelFormat::rgba);
-    m_component_type = ComponentType::uint8;
-    m_srgb_gamma = true;
-
-    rebuild_pixel_struct();
-
-    auto fs = dynamic_cast<FileStream*>(stream);
-    log_debug(
-        "Reading TGA file \"{}\" ({}x{}, {}, {}) ...",
-        fs ? fs->path().string() : "<stream>",
-        m_width,
-        m_height,
-        m_pixel_format,
-        m_component_type
-    );
-
-    uint8_t* data = stbi_load_from_callbacks(&reader.callbacks, &reader, &w, &h, &c, c);
-    if (!data)
-        SGL_THROW("Failed to read TGA file!");
-
-    SGL_ASSERT_EQ(m_width, static_cast<uint32_t>(w));
-    SGL_ASSERT_EQ(m_height, static_cast<uint32_t>(h));
-
-    m_data = std::unique_ptr<uint8_t[]>(data);
-    m_owns_data = true;
+    read_stb(stream, "TGA", false, false);
 }
 
 void Bitmap::write_tga(Stream* stream) const
@@ -1361,7 +1365,7 @@ void Bitmap::write_tga(Stream* stream) const
     check_required_format("TGA", {PixelFormat::y, PixelFormat::rgb, PixelFormat::rgba}, {ComponentType::uint8});
 
     if (!stbi_write_tga_to_func(&stbi_write_func, stream, m_width, m_height, int(channel_count()), data()))
-        SGL_THROW("Failed to write BMP file!");
+        SGL_THROW("Failed to write TGA file!");
 }
 
 // ----------------------------------------------------------------------------
@@ -1370,39 +1374,7 @@ void Bitmap::write_tga(Stream* stream) const
 
 void Bitmap::read_hdr(Stream* stream)
 {
-    StreamReader reader(stream);
-    int w, h, c;
-    if (!stbi_info_from_callbacks(&reader.callbacks, &reader, &w, &h, &c))
-        SGL_THROW("Failed to read HDR file!");
-    reader.reset();
-
-    m_width = w;
-    m_height = h;
-    m_pixel_format = PixelFormat::rgb;
-    m_component_type = ComponentType::float32;
-    m_srgb_gamma = false;
-
-    rebuild_pixel_struct();
-
-    auto fs = dynamic_cast<FileStream*>(stream);
-    log_debug(
-        "Reading HDR file \"{}\" ({}x{}, {}, {}) ...",
-        fs ? fs->path().string() : "<stream>",
-        m_width,
-        m_height,
-        m_pixel_format,
-        m_component_type
-    );
-
-    float* data = stbi_loadf_from_callbacks(&reader.callbacks, &reader, &w, &h, &c, c);
-    if (!data)
-        SGL_THROW("Failed to read HDR file!");
-
-    SGL_ASSERT_EQ(m_width, static_cast<uint32_t>(w));
-    SGL_ASSERT_EQ(m_height, static_cast<uint32_t>(h));
-
-    m_data = std::unique_ptr<uint8_t[]>(reinterpret_cast<uint8_t*>(data));
-    m_owns_data = true;
+    read_stb(stream, "HDR", false, true);
 }
 
 void Bitmap::write_hdr(Stream* stream) const

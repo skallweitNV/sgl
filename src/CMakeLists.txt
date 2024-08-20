@@ -325,7 +325,6 @@ file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/include/sgl/core/config.h CONTE
 #define SGL_HAS_PNG $<BOOL:${SGL_HAS_PNG}>
 #define SGL_HAS_OPENEXR $<BOOL:${SGL_HAS_OPENEXR}>
 #define SGL_HAS_ASMJIT $<BOOL:${SGL_HAS_ASMJIT}>
-#define SGL_HAS_TEVCLIENT $<BOOL:${SGL_HAS_TEVCLIENT}>
 "
 )
 target_include_directories(sgl PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -339,7 +338,9 @@ target_link_libraries(sgl
         sgl_data
     PRIVATE
         git_version
-        glfw stb header_only
+        glfw
+        tevclient
+        header_only
         $<$<BOOL:${SGL_HAS_D3D12}>:d3d12>
         $<$<BOOL:${SGL_HAS_AGILITY_SDK}>:agility_sdk>
         # $<$<BOOL:${SGL_HAS_AFTERMATH}>:aftermath>
@@ -348,7 +349,6 @@ target_link_libraries(sgl
         $<$<BOOL:${SGL_HAS_JPEG}>:JPEG::JPEG>
         $<$<BOOL:${SGL_HAS_OPENEXR}>:OpenEXR::OpenEXR>
         $<$<BOOL:${SGL_HAS_ASMJIT}>:asmjit::asmjit>
-        $<$<BOOL:${SGL_HAS_TEVCLIENT}>:tevclient::tevclient>
         # Windows system libraries.
         $<$<PLATFORM_ID:Windows>:Dbghelp>
         # $<$<PLATFORM_ID:Windows>:shcore.lib>
@@ -555,7 +555,7 @@ if(SGL_BUILD_TESTS)
         sgl/math/tests/test_vector.cpp
     )
     target_include_directories(sgl_tests BEFORE PRIVATE sgl/tests)
-    target_link_libraries(sgl_tests PRIVATE doctest::doctest sgl)
+    target_link_libraries(sgl_tests PRIVATE sgl header_only)
     target_compile_definitions(sgl_tests PRIVATE SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
     set_target_properties(sgl_tests PROPERTIES
