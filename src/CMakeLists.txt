@@ -334,13 +334,13 @@ target_link_libraries(sgl
         fmt::fmt
         slang::slang slang::gfx
         Vulkan::Headers
+        header_only
         $<$<NOT:$<BOOL:${SGL_USE_DYNAMIC_CUDA}>>:CUDA::cuda_driver>
         sgl_data
     PRIVATE
         git_version
         glfw
         tevclient
-        header_only
         $<$<BOOL:${SGL_HAS_D3D12}>:d3d12>
         $<$<BOOL:${SGL_HAS_AGILITY_SDK}>:agility_sdk>
         # $<$<BOOL:${SGL_HAS_AFTERMATH}>:aftermath>
@@ -447,7 +447,7 @@ if(SGL_BUILD_PYTHON)
         add_custom_command(
             APPEND
             OUTPUT ${stub_file}
-            COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/postprocess_stub.py --file=${stub_file} --quiet
+            COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/postprocess_stub.py --file=${stub_file} --quiet
             COMMENT "Post-processing stub ${stub_file}"
         )
     endfunction()
